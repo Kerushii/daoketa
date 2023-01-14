@@ -3,7 +3,7 @@ import { defineStore } from 'pinia'
 
 // establish a ws to 192.168.1.114:8080
 const socket = new WebSocket("ws://192.168.1.114:8080");
-const netResp = ref(null);
+const netResp = ref('');
 socket.onopen = function(e) {
   alert("[open] Connection established");
 };

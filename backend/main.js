@@ -8,21 +8,8 @@ const { spawn } = require("child_process");
 const py = spawn("python3", ["./ai.py"]);
 
 
-clientRequest = null;
 
-// for every second, send the request to the ipc server
-setInterval(() => {
-    // return if py is no longer running
-    if (py.exitCode)
-        return;
 
-    if (clientRequest) {
-        // send the client request to stdio and include a new line
-        py.stdin.write(JSON.stringify(clientRequest) + " \n");
-
-    clientRequest=null;
-    }
-}, 1000);
 
 // listen for messages from stdio
 py.stdout.on("data", (data) => {
@@ -55,8 +42,11 @@ wss.on("connection", (ws) => {
         // parse the message as json
         const data = JSON.parse(message);
         console.log(data)
-        // add the request to the list of requests
-        clientRequest = data;
+        if (py.exitCode)
+            return;
+        py.stdin.write(JSON.stringify(data) + " \n");
+
+        
 
     });
 
