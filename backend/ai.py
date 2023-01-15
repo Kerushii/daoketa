@@ -52,6 +52,13 @@ def tAI():
             return
         text = galAiGetResp(int(msg['completionLength']), float(msg['temp']),  msg['text'])
         print('fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU'+text, flush=True)
+
+    if msg['action'] == 'assist' and msg['aiType'] == 'pubmedGPT':
+        if msg['text'] == '':
+            return
+        text = pubmedGPTGetResp(int(msg['completionLength']), float(msg['temp']),  msg['text'])
+        print('fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU'+text, flush=True)
+
     print('py ai thread exitings')
     aiRunning = False
     return

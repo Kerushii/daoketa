@@ -13,13 +13,13 @@ import { RouterLink, RouterView } from 'vue-router'
     <RouterView />
 
     <div class="navigat"
-      style="position:absolute;top:0;left:2%;height:100%;width:40vh;transform: perspective(59vh);transform-style:preserve-3d;">
+      style="position:absolute;top:0;left:2%;height:100%;width:40vh;transform: perspective(59vh);transform-style:preserve-3d;pointer-events: none;">
       <div style="position:absolute;height:80%;top:10%;width: 1px;left:4vw;background: #ffffff2b;"></div>
       <RouterLink to="/assist" class="button"
-        style="position:absolute;top:20%;left:10%;height:10%;width:70%;background: #f1f1f1bd;transform: rotateY(7deg);filter: drop-shadow(14px 11px 4px rgba(255,255,255,0.3));"> ASSIST
+        style="pointer-events: auto; position:absolute;top:20%;left:10%;height:10%;width:70%;background: #f1f1f1bd;transform: rotateY(7deg);filter: drop-shadow(14px 11px 4px rgba(255,255,255,0.3));"> ASSIST
       </RouterLink>
       <RouterLink to="/annotate" class="button"
-        style="position:absolute;top: 34%;left:10%;height:10%;width:70%;background: #f1f1f1bd;transform: rotateY(7deg);filter: drop-shadow(14px 11px 4px rgba(255,255,255,0.3));"> ANNOTATE
+        style="pointer-events: auto; position:absolute;top: 34%;left:10%;height:10%;width:70%;background: #f1f1f1bd;transform: rotateY(7deg);filter: drop-shadow(14px 11px 4px rgba(255,255,255,0.3));"> ANNOTATE
       </RouterLink>
       <div class="sep"
         style="position:absolute;top: 83%;left: 35%;height: 0.1%;width: 79%;background: #ffffffad;transform: rotateY(7deg);filter: drop-shadow(14px 11px 4px rgba(255,255,255,0.8));">

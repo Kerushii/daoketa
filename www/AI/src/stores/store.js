@@ -9,7 +9,8 @@ socket.onopen = function(e) {
 };
 
 socket.onmessage = function(event) {
-  netResp.value = event.data;
+ //netResp.value = event.data.replace(/\n/g, '</br>');
+ netResp.value = event.data
 };
 
 socket.onclose = function(event) {

@@ -16,6 +16,7 @@ py.stdout.on("data", (data) => {
     // decode the stdio message
     console.log('py responded:'+data)
     data = data.toString();
+    console.log('py responded post:'+data)
     if(!data.includes('fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU'))
         return;
     // get all string after "fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU"
