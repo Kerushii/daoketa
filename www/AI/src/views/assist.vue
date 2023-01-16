@@ -7,7 +7,6 @@ export default {
   data() {
     return {
       userInput: '',
-      syncedInput: '',
       localMemory: '',
 
       aiType: 'gal',
@@ -19,7 +18,7 @@ export default {
   },
 
   computed: {
-    ...mapState(useUserStore, ['netResp']),
+    ...mapState(useUserStore, ['netRespAssist']),
     netProcess() {
       function removeLastn(input) {
         var str = input
@@ -36,10 +35,10 @@ export default {
         return str
       }
       if (this.priming)
-        return this.netResp
+        return this.netRespAssist
       // if(this.netResp.replace(/<\/br>/g, '\n').includes(this.userInput)){ // all user inputs use \n
-      if (this.netResp.includes(removeLastn(this.userInput))) {
-        this.localMemory = this.netResp
+      if (this.netRespAssist.includes(removeLastn(this.userInput))) {
+        this.localMemory = this.netRespAssist
       }
       return this.localMemory
     }
@@ -60,13 +59,15 @@ export default {
         str = str.slice(0, n) + str.slice(n).replace(word, newWord);
         return str
       }
-      if (this.netResp.includes(removeLastn(this.userInput)))
+      console.log('1')
+      if (this.netRespAssist.includes(removeLastn(this.userInput)))
         return
+      console.log('2')
 
 
       this.assistSend('assist', this.aiType, this.completionLen, this.temp / 100, removeLastn(this.userInput)) //when we send, replace all br with \n so ai can understand
       // console.log('sending' + this.userInput)
-    }, 500)
+    }, 1000)
   },
   updated() {
   },
@@ -81,7 +82,7 @@ export default {
     },
 
     syncIn() {
-      this.userInput = this.netResp //when we insert, all userinputs become </br> instead
+      this.userInput = this.netRespAssist //when we insert, all userinputs become </br> instead
     },
     setPrime(p) {
       this.priming = p
@@ -93,8 +94,8 @@ export default {
 <template>
   <div style="position: absolute;height: 90vh;width: 163vh;right: 3vw;background: #ffffff00;top: 5vh;">
     <div class="typeArea" style="position: absolute;top: 5%;background: rgb(51 51 51 / 91%);width: 100%;height: 92%;backdrop-filter: blur(5px);overflow-y: auto;">
-      <textarea style="  background: transparent; position: relative;top: 0%;width: 93%;height: 94%;font-family: font3;font-size: 3vh;font-weight:900;color: #e5e5e56e;left: 0%;padding:3%;">{{ netProcess }}</textarea>
-      <textarea v-model='userInput' style="background: transparent;outline: none; position: absolute; top: 0%; width: 93%; height: 94%; font-family: font3; font-size: 3vh; font-weight: 900; left: 0%; color: rgb(229, 229, 229); padding: 3%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);" @keydown.tab.prevent="syncIn"></textarea>
+      <textarea style="  background: transparent; position: relative;top: 0%;width: 93%;height: 99999%;font-family: font3;font-size: 3vh;font-weight:900;color: #e5e5e56e;left: 0%;padding:3%;">{{ netProcess }}</textarea>
+      <textarea v-model='userInput' style="background: transparent;outline: none; position: absolute; top: 0%; width: 93%; height: 99999%; font-family: font3; font-size: 3vh; font-weight: 900; left: 0%; color: rgb(229, 229, 229); padding: 3%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);" @keydown.tab.prevent="syncIn"></textarea>
     </div>
     <div style="position: absolute;top: 97%;background: rgba(0, 0, 0, 0.63);width: 100%;height: 5%;filter: drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left: 0%;">
     </div>

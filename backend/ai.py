@@ -2,6 +2,7 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
 import sys
 import threading
+from copy import deepcopy
 
 
 print('py init', flush=True)
@@ -15,73 +16,103 @@ print('py ready', flush=True)
 
 
 
-msg = None
-aiRunning = False
-ai2Running = False
-
+msg = {}
+aiRunning = [False, False]
 
 def galAiGetResp( length, temp, text):
-    global msg
-    msg = None
+
         
     context = text
     mNewToken  = length
+    #print('tokenizing', flush=True)
     input_ids = tokenizerfb(context, return_tensors="pt").input_ids.to('cuda')
-    gen_tokens = modelfb.generate(input_ids, do_sample=True, temperature=temp, max_new_tokens=mNewToken,)
-    gen_text = tokenizerfb.batch_decode(gen_tokens)[0]
+    #print('done tokenizing', flush=True)
+    gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_new_tokens=mNewToken)
+    #print('generated text', flush=True)
+    gen_text = tokenizerfb.batch_decode(gen_tokens)
+    #print('decoding', flush=True)
     return gen_text
 
 def pubmedGPTGetResp( length, temp, text):
-    global msg
-    msg = None
+
         
     context = text
     mNewToken  = length
     input_ids = tokenizerpubgpt(context, return_tensors="pt").input_ids.to('cuda')
-    gen_tokens = modelpubgpt.generate(input_ids, do_sample=True, temperature=temp, max_new_tokens=mNewToken,)
-    gen_text = tokenizerpubgpt.batch_decode(gen_tokens)[0]
+    gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,     top_k=50, top_p=0.95, temperature=temp, max_new_tokens=mNewToken,)
+    gen_text = tokenizerpubgpt.batch_decode(gen_tokens)
     return gen_text
     
+def attachAIResp2MsgEntry(texts, processedMsg):
+    respDict = {}
+    #print(repr(msg))
+    #print(repr(texts))
+    for i in range(len(texts)):
+        for singleMsg in processedMsg:
+            if processedMsg[singleMsg]['text'] in texts[i]:
+                respDict[singleMsg] = texts[i]
+            
+    print(json.dumps(respDict, ensure_ascii=True), flush=True)
 
-def tAI():
+def tAI(whichAI, pubMedInput, galAIInput, completionLength, processedMsg, threadActive):
     global aiRunning
-    print('py ai thread initing')
-    #while msg:
-    if msg['action'] == 'assist' and msg['aiType'] == 'gal':
-        if msg['text'] == '':
-            return
-        text = galAiGetResp(int(msg['completionLength']), float(msg['temp']),  msg['text'])
-        print('fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU'+text, flush=True)
 
-    if msg['action'] == 'assist' and msg['aiType'] == 'pubmedGPT':
-        if msg['text'] == '':
-            return
-        text = pubmedGPTGetResp(int(msg['completionLength']), float(msg['temp']),  msg['text'])
-        print('fdgerguhyGTYGVTFYTYGRtfgycyrtfGYVYTGYTvGTVYGUBYU'+text, flush=True)
 
-    print('py ai thread exitings')
-    aiRunning = False
+    if whichAI == 'gal':
+        text = galAiGetResp(completionLength,temp,  galAIInput)
+
+
+    if whichAI == 'pubmedGPT':
+        text = pubmedGPTGetResp(completionLength,temp,  pubMedInput)
+
+    attachAIResp2MsgEntry(text, processedMsg)
+    aiRunning[threadActive]=False
+    #print('ai running'+str(aiRunning))
     return
 
 #aiThread = threading.Thread(target = tAI, args = ())
 while True:
-    
-    msg = input() #multi user scenerio: while the ai thread is working, accumulate 1 msg for each user. the msg list will be destroyed once the ai runs
-    print('py '+str(msg))
-
-    #covert msg from json to dict
-    msg = json.loads(msg)
-    
-    if not aiRunning:
-        aiRunning = True
-        aiThread = threading.Thread(target = tAI, args = ())
-        aiThread.start()
+    rx = input()
+    print('received '+rx, flush=True)
+    rx = json.loads(rx)
+    msgEntry = rx['userNameAction']
+    if rx['text'] == '':
         continue
+    msg[msgEntry]= {'aiType':rx['aiType'],'temp':rx['temp'], 'text':rx['text'], 'completionLength':rx['completionLength']}
 
-    if not ai2Running:
-        ai2Running = True
-        ai2Thread = threading.Thread(target = tAI, args = ())
-        ai2Thread.start()
+    
+    
+    for threadActive in aiRunning:
+        if aiRunning[threadActive]:
+            continue
+        processedMsg = {}
+        aiRunning[threadActive] = True
+
+        completionLength = 50
+        inputPool={'gal':0,'pubmedGPT':0}
+        pubMedInput = []
+        galAIInput = []
+        for entry in msg:
+            completionLength = int(msg[entry]['completionLength'])
+            temp = float(msg[entry]['temp'])
+            if msg[entry]['aiType'] == 'gal':
+                inputPool['gal']+=1
+                galAIInput.append(msg[entry]['text'])
+            if msg[entry]['aiType'] == 'pubmedGPT':
+                inputPool['pubmedGPT']+=1
+                pubMedInput.append(msg[entry]['text'])
+        maxBacklogAI = max(inputPool, key=inputPool.get)
+
+        if inputPool[maxBacklogAI] == 0:
+            continue
+        tempMsgQ = deepcopy(msg)
+        for header in tempMsgQ:
+            if msg[header]['aiType']==maxBacklogAI:
+                del msg[header]
+                processedMsg[header]=tempMsgQ[header]
+        aiThread = threading.Thread(target = tAI, args = (maxBacklogAI,pubMedInput,galAIInput, completionLength, processedMsg, threadActive))
+        aiThread.start()
+
 
     
 
