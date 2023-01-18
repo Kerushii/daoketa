@@ -1,9 +1,70 @@
 <template>
     <div>
-        <div style="position: absolute;width: 71%;height: 85%;overflow: auto;left: 13%;top: 9%;" @mouseup="getSelected">
+
+        <div style="position:absolute;width:163vh;height:90vh;top:5vh;right:3vw;">
+            <div class="menuEntryOff" v-if="menuEntry != 'model'" style="position:absolute;top:-6.1%;background: rgb(100 100 100);width:9%;height:7.1%;filter:drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px);left: 0%;overflow:hidden;" @click="setMenuEntry('model')">
+                <div style="position:absolute;top:19%;right: 16%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">MODEL</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">SET GENERATION CONFIGS</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntryOff" v-if="menuEntry != 'gen'" style="position:absolute;top:-6.1%;background: rgb(100 100 100);width:9%;height:7.1%;filter:drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px);left: 9%;overflow:hidden;" @click="setMenuEntry('gen')">
+                <div style="position:absolute;top:19%;right: 16%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">GENERATION</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">SET GENERATION CONFIGS</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntryOff" v-if="menuEntry != 'file'" style="position:absolute;top:-6.1%;background: rgb(100 100 100);width:9%;height:7.1%;filter:drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px);left: 18%;overflow:hidden;" @click="setMenuEntry('file')">
+                <div style="position:absolute;top:19%;right: 16%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">FILE</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">CHANGE THE FILE</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntryOn" v-if="menuEntry == 'model'" style="position:absolute;top:-6.1%;background:rgba(255, 253, 253, 0.77);width:9%;height:7.1%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:0%;overflow:hidden;">
+                <div style="position:absolute;top:19%;left:46%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">MODEL</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">SELECT MODELS FOR THE BEST PERFORMANCE</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntryOn" v-if="menuEntry == 'gen'" style="position:absolute;top:-6.1%;background:rgba(255, 253, 253, 0.77);width:9%;height:7.1%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:9%;overflow:hidden;">
+                <div style="position:absolute;top:19%;left:46%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">GENERATION</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">SELECT MODELS FOR THE BEST PERFORMANCE</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntryOn" v-if="menuEntry == 'file'" style="position:absolute;top:-6.1%;background:rgba(255, 253, 253, 0.77);width:9%;height:7.1%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:18%;overflow:hidden;">
+
+
+                <div style="position:absolute;top:19%;left:46%;font-family:font2;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">FILE</div>
+                <div style="position:absolute;top:49%;left:30%;font-family:font5;text-align:right;width:54%;font-size:0.7vh;filter:drop-shadow(rgba(0, 0, 0, 0.6) 10px 9px 4px);">CHANGE THE FILE</div><img src="/network-wired-solid.svg" style="position:absolute;bottom:16%;left:-3%;height:64%;opacity:0.05;">
+            </div>
+            <div class="menuEntrySubOpt" v-if="menuEntry == 'model'" style="position:absolute;top:1%;background:rgb(255 253 253 / 44%);width:100%;height:2%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:0%;">
+
+                <div v-if="aiType != 'gal'" style="position:absolute;height:100%;width:13%;/* background:#2196f3; */color: #7c7c7c;padding-right:0.4%;text-align:right;padding-top:1%;top: -68%;font-family:font10;filter:drop-shadow(#2196f352 14px 12px 11px);left:13.4%;" @click="setAIType('gal')">GALACTICA</div>
+                <div v-if="aiType == 'gal'" style="position:absolute;height:100%;width:13%;background:#2196f3;color:white;padding-right:0.4%;text-align:right;padding-top:1%;top:-26%;font-family:font10;filter:drop-shadow(#2196f352 14px 12px 11px);left:13.4%;">GALACTICA</div>
+            </div>
+
+            <div class="menuEntrySubOpt" v-if="menuEntry == 'gen'" style="position:absolute;top:1%;background:rgb(255 253 253 / 44%);width:100%;height:2%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:0%;">
+                <input v-model='completionLen' type="range" min="1" max="1000" class="slider" id="myRange" style="position: absolute; height: 200%; width: 13%;">
+                <div style="position: absolute;height: 211%;width: 13%;color: white;/* padding-right: 0.4%; */text-align: right;/* padding-top: 1%; */top: 0%;font-family: font10;filter: drop-shadow(rgba(33, 150, 243, 0.32) 14px 12px 11px);pointer-events: none;overflow:hidden;">
+
+                    <div style="position:absolute;top: 5%;/* left:1%; *//* font-size: 4vh; *//* font-family: font5; */background: #2196f3;font-weight:900;width:10%;height: 224%;"></div>
+                    <img src="/brain-solid.svg" style="position:absolute;width: 17%;left: 0%;top: 7%;filter: invert(0.9);opacity:0.5;">
+                    <div style="position:absolute;top: -18%;left: 15%;font-size: 4vh;font-family: font5;color: #ffffff75;font-weight:900;">{{ completionLen }}</div>
+                    <div style="position:absolute;top: 42%;left: 6%;font-size: 1vh;font-family:font1;background:#2196f3;width: 33%;text-align:center;">LNGH</div>
+                </div>
+                <input v-model='temp' type="range" min="1" max="99" class="slider" id="myRange" style="position: absolute; height: 200%; width: 13%; left: 13.4%;">
+                <div style="position: absolute;height: 211%;width: 13%;color: white;/* padding-right: 0.4%; */text-align: right;/* padding-top: 1%; */top: 0%;font-family: font10;filter: drop-shadow(rgba(33, 150, 243, 0.32) 14px 12px 11px);left: 13.4%;pointer-events: none;overflow:hidden;">
+
+                    <div style="position:absolute;top: 5%;/* left:1%; *//* font-size: 4vh; *//* font-family: font5; */background: #2196f3;font-weight:900;width:70%;height: 224%;"></div>
+                    <img src="/brain-solid.svg" style="position:absolute;width: 17%;left: 0%;top: 7%;filter: invert(0.9);opacity:0.5;">
+                    <div style="position:absolute;top: -18%;left: 15%;font-size: 4vh;font-family: font5;color: #ffffff75;font-weight:900;">{{ temp }}</div>
+                    <div style="position:absolute;top: 42%;left: 6%;font-size: 1vh;font-family:font1;background:#2196f3;width: 33%;text-align:center;">TEMP</div>
+                </div>
+            </div>
+
+            <div class="menuEntrySubOpt" v-if="menuEntry == 'file'" style="position:absolute;top:1%;background:rgb(255 253 253 / 44%);width:100%;height:2%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:0%;">
+
+<input type="file" id="files" name="filetoupload" style="display:none" @change="sendFile">
+                    <label for="files" style="position:absolute;height:100%;width:13%;background:#2196f3;color:white;padding-right:0.4%;text-align:right;padding-top:1%;top:-26%;font-family:font10;filter:drop-shadow(#2196f352 14px 12px 11px); ">SELECT NEW FILE</label>
+
+
+            </div>
+        </div>
+        <div v-if='source1' style="position: absolute;width: 71%;height: 85%;overflow: auto;left: 13%;top: 9%;" @mouseup="getSelected">
             <vue-pdf-embed :source="source1" />
         </div>
-        <div v-if="parseNet" :style="{ position: 'absolute',width:'16vw', top: 'calc(2vh + '+cursorY+'px)', left: cursorX+'px', background:'grey'}">{{ parseNet }}</div>
+        <div v-if="parseNet" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: 'grey' }">{{ parseNet }}</div>
 
     </div>
 </template>
@@ -21,32 +82,61 @@ export default {
     },
     data() {
         return {
-            source1: '/public/pdfUploads/fExam.pdf',
             cursorX: 0,
             cursorY: 0,
             aiType: 'gal',
+            menuEntry: 'model',
+            temp: 0.7,
+            completionLen: 100,
         }
     },
     computed: {
-        ...mapState(useUserStore, ['netAnnotate']),
-        parseNet(){
-            if(!this.netAnnotate)
+        ...mapState(useUserStore, ['netAnnotate', 'annoPdf']),
+        parseNet() {
+            if (!this.netAnnotate)
                 return false
-            if(!this.netAnnotate.includes('TLDR:'))
-                return false
-            let resp = this.netAnnotate.split("TLDR:")[1]
-            let actualResp = resp.split("\n")[0]
-            return actualResp
+            if (this.netAnnotate.includes('TLDR:')) {
+                const resp = this.netAnnotate.split("TLDR:")[1]
+                const actualResp = resp.split("\n")[0]
+                return actualResp
+            }
+
+        },
+        source1(){
+            if(!this.annoPdf)
+                return
+            return '/public/pdfUploads/'+this.annoPdf
+
         }
     },
     methods: {
-        ...mapActions(useUserStore, ['assistSend', 'clearnetAnnotate']),
+        ...mapActions(useUserStore, ['assistSend', 'clearnetAnnotate',]),
+        sendFile(e) {
+            let photo = e.target.files[0];
+            let formData = new FormData();
+            console.log('posting')
+            formData.append("photo", photo);
+            fetch('http://mail.eterea.uk:8081/fileupload', { method: "POST", body: formData, mode: 'no-cors', });
+        },
+
+        setAIType(aiType) {
+            this.aiType = aiType
+
+        },
+        setMenuEntry(m) {
+            this.menuEntry = m
+        },
         getSelected(event) {
             let text = getSelectionText()
-            if(text.length<=10){
-            this.clearnetAnnotate()
-                return}
-            if(text.length>=1000)
+            if (!text) {
+                this.clearnetAnnotate()
+                return
+            }
+            if (text.length <= 10) {
+                this.clearnetAnnotate()
+                return
+            }
+            if (text.length >= 1000)
                 return
             function getSelectionText() {
                 var text = "";
@@ -61,7 +151,11 @@ export default {
             this.cursorX = event.clientX
             this.cursorY = event.clientY
             // console.log(getSelectionText(), event.clientX, event.clientY)
-            this.assistSend('annotate', 'gal', 100, 0.7, text.replace(/\n/g, ' ')+"\n\nTLDR:")
+            if (this.aiType == 'gal') {
+                this.assistSend('annotate', this.aiType, this.completionLen, this.temp, text.replace(/\n/g, ' ') + "\n\nTLDR:")
+                return
+            }
+
         }
 
     },

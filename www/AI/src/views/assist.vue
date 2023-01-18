@@ -8,7 +8,7 @@ export default {
     return {
       userInput: '',
       localMemory: '',
-
+      querry:0,
       aiType: 'gal',
       menuEntry: 'model',
       completionLen: 50,
@@ -44,7 +44,7 @@ export default {
     }
   },
   mounted() {
-    setInterval(() => {
+    this.querry = setInterval(() => {
       function removeLastn(input) {
         var str = input
         var word = '\n';
@@ -68,6 +68,9 @@ export default {
       this.assistSend('assist', this.aiType, this.completionLen, this.temp / 100, removeLastn(this.userInput)) //when we send, replace all br with \n so ai can understand
       // console.log('sending' + this.userInput)
     }, 1000)
+  },
+  unmounted(){
+    clearInterval(this.querry)
   },
   updated() {
   },

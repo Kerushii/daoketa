@@ -2,6 +2,8 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
 import sys
 import threading
+# text = some text source with a potential unicode problem
+
 from copy import deepcopy
 
 
@@ -10,7 +12,7 @@ max_memory_mapping = {0: "24GB", 1: "24GB"}
 tokenizerfb = AutoTokenizer.from_pretrained("facebook/galactica-6.7b")
 modelfb = AutoModelForCausalLM.from_pretrained("facebook/galactica-6.7b", device_map="auto",  max_memory=max_memory_mapping)
 
-tokenizerpubgpt = AutoTokenizer.from_pretrained("stanford-crfm/pubmedgpt")
+tokenizerpubgpt = AutoTokenizer.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto",  max_memory=max_memory_mapping)
 modelpubgpt = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt").to('cuda')
 print('py ready', flush=True)
 
@@ -27,7 +29,7 @@ def galAiGetResp( length, temp, text):
     #print('tokenizing', flush=True)
     input_ids = tokenizerfb(context, return_tensors="pt").input_ids.to('cuda')
     #print('done tokenizing', flush=True)
-    gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_new_tokens=mNewToken)
+    gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=mNewToken)
     #print('generated text', flush=True)
     gen_text = tokenizerfb.batch_decode(gen_tokens)
     #print('decoding', flush=True)
@@ -38,9 +40,13 @@ def pubmedGPTGetResp( length, temp, text):
         
     context = text
     mNewToken  = length
+    print('tokenizing', flush=True)
     input_ids = tokenizerpubgpt(context, return_tensors="pt").input_ids.to('cuda')
-    gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,     top_k=50, top_p=0.95, temperature=temp, max_new_tokens=mNewToken,)
+    print('done tokenizing', flush=True)
+    gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,temperature=temp, max_time=30.0, max_new_tokens=mNewToken,)
+    print('generated text', flush=True)
     gen_text = tokenizerpubgpt.batch_decode(gen_tokens)
+    print('decoding', flush=True)
     return gen_text
     
 def attachAIResp2MsgEntry(texts, processedMsg):
@@ -73,12 +79,16 @@ def tAI(whichAI, pubMedInput, galAIInput, completionLength, processedMsg, thread
 #aiThread = threading.Thread(target = tAI, args = ())
 while True:
     rx = input()
-    print('received '+rx, flush=True)
-    rx = json.loads(rx)
-    msgEntry = rx['userNameAction']
-    if rx['text'] == '':
-        continue
-    msg[msgEntry]= {'aiType':rx['aiType'],'temp':rx['temp'], 'text':rx['text'], 'completionLength':rx['completionLength']}
+    try:
+        print('received '+rx, flush=True)
+        rx = json.loads(rx)
+        msgEntry = rx['userNameAction']
+        if rx['text'] == '':
+            continue
+        msg[msgEntry]= {'aiType':rx['aiType'],'temp':rx['temp'], 'text':rx['text'], 'completionLength':rx['completionLength']}
+    except:
+        print('invalid json from server, skipping to the next request', flush=True)
+        pass
 
     
     
