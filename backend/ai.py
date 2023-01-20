@@ -1,11 +1,15 @@
 from transformers import AutoTokenizer, AutoModelForCausalLM
 import json
-import sys
 import threading
-# text = some text source with a potential unicode problem
-
+import websocket
+import _thread
+import time
+import rel
 from copy import deepcopy
 
+runningAIs=0
+text2token = {}
+backLog = []
 
 print('py init', flush=True)
 max_memory_mapping = {0: "24GB", 1: "24GB"}
@@ -18,21 +22,18 @@ print('py ready', flush=True)
 
 
 
-msg = {}
-aiRunning = [False, False]
-
 def galAiGetResp( length, temp, text):
 
         
     context = text
     mNewToken  = length
-    #print('tokenizing', flush=True)
+    print('tokenizing', flush=True)
     input_ids = tokenizerfb(context, return_tensors="pt").input_ids.to('cuda')
-    #print('done tokenizing', flush=True)
+    print('done tokenizing', flush=True)
     gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=mNewToken)
-    #print('generated text', flush=True)
+    print('generated text', flush=True)
     gen_text = tokenizerfb.batch_decode(gen_tokens)
-    #print('decoding', flush=True)
+    print('decoding', flush=True)
     return gen_text
 
 def pubmedGPTGetResp( length, temp, text):
@@ -40,13 +41,13 @@ def pubmedGPTGetResp( length, temp, text):
         
     context = text
     mNewToken  = length
-    print('tokenizing', flush=True)
+    #print('tokenizing', flush=True)
     input_ids = tokenizerpubgpt(context, return_tensors="pt").input_ids.to('cuda')
-    print('done tokenizing', flush=True)
+    #print('done tokenizing', flush=True)
     gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,temperature=temp, max_time=30.0, max_new_tokens=mNewToken,)
-    print('generated text', flush=True)
+    #print('generated text', flush=True)
     gen_text = tokenizerpubgpt.batch_decode(gen_tokens)
-    print('decoding', flush=True)
+    #print('decoding', flush=True)
     return gen_text
     
 def attachAIResp2MsgEntry(texts, processedMsg):
@@ -60,7 +61,7 @@ def attachAIResp2MsgEntry(texts, processedMsg):
             
     print(json.dumps(respDict, ensure_ascii=True), flush=True)
 
-def tAI(whichAI, pubMedInput, galAIInput, completionLength, processedMsg, threadActive):
+def aiThread(whichAI, pubMedInput, galAIInput, completionLength, processedMsg, threadActive):
     global aiRunning
 
 
@@ -73,55 +74,46 @@ def tAI(whichAI, pubMedInput, galAIInput, completionLength, processedMsg, thread
 
     attachAIResp2MsgEntry(text, processedMsg)
     aiRunning[threadActive]=False
-    #print('ai running'+str(aiRunning))
+    #call aiTHreadLauncher upon finishing up
     return
 
-#aiThread = threading.Thread(target = tAI, args = ())
-while True:
-    rx = input()
-    try:
-        print('received '+rx, flush=True)
-        rx = json.loads(rx)
-        msgEntry = rx['userNameAction']
-        if rx['text'] == '':
-            continue
-        msg[msgEntry]= {'aiType':rx['aiType'],'temp':rx['temp'], 'text':rx['text'], 'completionLength':rx['completionLength']}
-    except:
-        print('invalid json from server, skipping to the next request', flush=True)
-        pass
+def aiTheadLauncher():
+    #if nothing in backlog, return
+    #while running ai <2, do the following:
+        #count how many reqs each ai have
+        #for the ai type with the highest req count, launch ai thread
+        #delete the elements in the list that have this ai type
+        #go to the next loop
 
-    
-    
-    for threadActive in aiRunning:
-        if aiRunning[threadActive]:
-            continue
-        processedMsg = {}
-        aiRunning[threadActive] = True
 
-        completionLength = 50
-        inputPool={'gal':0,'pubmedGPT':0}
-        pubMedInput = []
-        galAIInput = []
-        for entry in msg:
-            completionLength = int(msg[entry]['completionLength'])
-            temp = float(msg[entry]['temp'])
-            if msg[entry]['aiType'] == 'gal':
-                inputPool['gal']+=1
-                galAIInput.append(msg[entry]['text'])
-            if msg[entry]['aiType'] == 'pubmedGPT':
-                inputPool['pubmedGPT']+=1
-                pubMedInput.append(msg[entry]['text'])
-        maxBacklogAI = max(inputPool, key=inputPool.get)
 
-        if inputPool[maxBacklogAI] == 0:
-            continue
-        tempMsgQ = deepcopy(msg)
-        for header in tempMsgQ:
-            if msg[header]['aiType']==maxBacklogAI:
-                del msg[header]
-                processedMsg[header]=tempMsgQ[header]
-        aiThread = threading.Thread(target = tAI, args = (maxBacklogAI,pubMedInput,galAIInput, completionLength, processedMsg, threadActive))
-        aiThread.start()
+
+def on_message(ws, message):
+    rx = json.loads(rx)
+    text2token[rx.text]=rx
+    backlog.append(rx)
+    aiTheadLauncher()
+
+def on_error(ws, error):
+    print(error)
+
+def on_close(ws, close_status_code, close_msg):
+    print("### closed ###")
+
+def on_open(ws):
+    print("Opened connection")
+
+if __name__ == "__main__":
+    websocket.enableTrace(True)
+    ws = websocket.WebSocketApp("ws://127.0.0.1:8083",
+                              on_open=on_open,
+                              on_message=on_message,
+                              on_error=on_error,
+                              on_close=on_close)
+
+    ws.run_forever(dispatcher=rel, reconnect=5)  # Set dispatcher to automatic reconnection, 5 second reconnect delay if connection closed unexpectedly
+    rel.signal(2, rel.abort)  # Keyboard Interrupt
+    rel.dispatch()
 
 
     

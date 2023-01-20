@@ -1,38 +1,11 @@
-
-
 const WebSocketServer = require("ws").Server;
-const wss = new WebSocketServer({ port: 8083 });
-var http = require('http');
-var formidable = require('formidable');
-var fs = require('fs');
-
-const { spawn } = require("child_process");
 const py = spawn("python3", ['-u',"./ai.py"]);
-
-requestsDict = {}
-
+var aiWorker
+const { spawn } = require("child_process");
 py.stdout.on("data", (data) => {
     data = data.toString();
-    try{
-        data=JSON.parse(data);
-        }
-        catch{
-            console.log('pydebug '+data)
-            return
-        }
-        console.log('pyresponse'+data)
-        for(header in data){
-            requestsDict[header].send(
-                JSON.stringify({
-                    action:header, parameters:{'data': data[header]}
-                })
-            )
-        }
-    
+    console.log(daya)
 
-
-
-    
 
 });
 
@@ -40,16 +13,34 @@ py.stdout.on("error", (err) => {
     console.log(err);
 });
 
+
+var crypto = require('crypto');
+var base64url = require('base64url');
+const tokens2Client = {}
+const wss = new WebSocketServer({ port: 8083 });
+function checkUsrLogin(u, p){
+    return 'admin'
+}
 wss.on("connection", (ws) => {
     ws.on("message", (message) => {
         const data = JSON.parse(message);
         const action = data.action
+        let token = ''
         switch(action){
-            case 'useAI':
-                requestsDict[data.parameters.userNameAction]=ws
-                if (py.exitCode)
-                    return;
-                py.stdin.write(JSON.stringify(data.parameters) + " \n");
+            case 'useAI4Assist':
+                token = base64url(crypto.randomBytes(45));
+                data.parameters.toekn = token
+                tokens2Client.token = ws
+                ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
+                aiWorker.send(JSON.stringify(data))
+                break
+            
+            case 'useAI4Annotate':
+                token = base64url(crypto.randomBytes(45));
+                data.parameters.toekn = token
+                tokens2Client.token = ws
+                ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
+                aiWorker.send(JSON.stringify(data))
                 break
             
             case 'login':
@@ -68,10 +59,10 @@ wss.on("connection", (ws) => {
 
 });
 
-function checkUsrLogin(u, p){
-    return 'admin'
-}
 
+var http = require('http');
+var formidable = require('formidable');
+var fs = require('fs');
 http.createServer(function (req, res) {
     if (req.url == '/fileupload') {
       var form = new formidable.IncomingForm();

@@ -55,8 +55,8 @@
 
             <div class="menuEntrySubOpt" v-if="menuEntry == 'file'" style="position:absolute;top:1%;background:rgb(255 253 253 / 44%);width:100%;height:2%;filter:drop-shadow(rgba(255, 255, 255, 0.3) 14px 11px 4px);left:0%;">
 
-<input type="file" id="files" name="filetoupload" style="display:none" @change="sendFile">
-                    <label for="files" style="position:absolute;height:100%;width:13%;background:#2196f3;color:white;padding-right:0.4%;text-align:right;padding-top:1%;top:-26%;font-family:font10;filter:drop-shadow(#2196f352 14px 12px 11px); ">SELECT NEW FILE</label>
+                <input type="file" id="files" name="filetoupload" style="display:none" @change="sendFile">
+                <label for="files" style="position:absolute;height:100%;width:13%;background:#2196f3;color:white;padding-right:0.4%;text-align:right;padding-top:1%;top:-26%;font-family:font10;filter:drop-shadow(#2196f352 14px 12px 11px); ">SELECT NEW FILE</label>
 
 
             </div>
@@ -64,6 +64,19 @@
         <div v-if='source1' style="position: absolute;width: 71%;height: 85%;overflow: auto;left: 13%;top: 9%;" @mouseup="getSelected">
             <vue-pdf-embed :source="source1" />
         </div>
+        <input type="file" id="filess" name="filetoupload" style="display:none" @change="sendFile">
+
+        <label v-if='!source1' for="filess" style="position:absolute;width:71%;height:85%;mix-blend-mode:screen;top:12%;left:15%;" >
+            <div style="position:absolute;font-size: 25vh;font-family:font1;left: calc((100vw - 149vh) / 2);color:white;opacity:50%;top: 21%;width:100vh;">
+                选择文件
+            </div>
+            <div style="position:absolute;font-size: 6vh;font-family: font5;left: calc((101vw - 149vh) / 2);color:white;opacity:50%;top: 59%;width:100vh;">SELECT FILES
+            </div><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 384 512" style="position:absolute;top: 3%;left: 14%;height: 60vh;opacity: 0.2;filter:invert(100);"><!--! Font Awesome Pro 6.2.1 by @fontawesome - https://fontawesome.com License - https://fontawesome.com/license (Commercial License) Copyright 2022 Fonticons, Inc. -->
+                <path d="M0 64C0 28.7 28.7 0 64 0H224V128c0 17.7 14.3 32 32 32H384V448c0 35.3-28.7 64-64 64H64c-35.3 0-64-28.7-64-64V64zm384 64H256V0L384 128z"></path>
+            </svg>
+            <div style="position:absolute;font-size: 6vh;font-family: font5;left: calc((100vw - 149vh) / 2);background:black;opacity:50%;top: 59%;width:100vh;">SELECT FILES
+            </div>
+        </label>
         <div v-if="parseNet" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: 'grey' }">{{ parseNet }}</div>
 
     </div>
@@ -102,10 +115,10 @@ export default {
             }
 
         },
-        source1(){
-            if(!this.annoPdf)
+        source1() {
+            if (!this.annoPdf)
                 return
-            return '/public/pdfUploads/'+this.annoPdf
+            return '/pdfUploads/' + this.annoPdf
 
         }
     },
