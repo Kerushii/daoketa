@@ -1,7 +1,10 @@
 const WebSocketServer = require("ws").Server;
-const py = spawn("python3", ['-u',"./ai.py"]);
-var aiWorker
 const { spawn } = require("child_process");
+
+var aiWorker = null
+/*
+const py = spawn("python3", ['-u',"./ai.py"]);
+
 py.stdout.on("data", (data) => {
     data = data.toString();
     console.log(daya)
@@ -13,6 +16,21 @@ py.stdout.on("error", (err) => {
     console.log(err);
 });
 
+*/
+const pyws = new WebSocketServer({ port: 8084 });
+pyws.on("connection", (ws) => {
+    aiWorker = ws
+    console.log('ai worker connected')
+    ws.on("message", (message) => {
+        const data = JSON.parse(message);
+        const token = data.token
+        console.log(data)
+        tokens2Client[token].send(JSON.stringify({action:data.action, parameters:{text: data.response, token: data.token}}))
+    });
+
+
+});
+
 
 var crypto = require('crypto');
 var base64url = require('base64url');
@@ -22,25 +40,32 @@ function checkUsrLogin(u, p){
     return 'admin'
 }
 wss.on("connection", (ws) => {
+    const token = base64url(crypto.randomBytes(45));
+    ws.send(JSON.stringify({action:'token', parameters:{token}}))
     ws.on("message", (message) => {
+
         const data = JSON.parse(message);
         const action = data.action
-        let token = ''
         switch(action){
             case 'useAI4Assist':
-                token = base64url(crypto.randomBytes(45));
-                data.parameters.toekn = token
-                tokens2Client.token = ws
-                ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
-                aiWorker.send(JSON.stringify(data))
+                // token = base64url(crypto.randomBytes(45));
+                // data.parameters.token = token
+
+                tokens2Client[token] = ws
+                // data.parameters.text = data.parameters.text.substring(0, 1024)
+                // get the last 1024 characters
+                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 1024)
+                //vws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
+                aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
             
             case 'useAI4Annotate':
-                token = base64url(crypto.randomBytes(45));
-                data.parameters.toekn = token
+                // token = base64url(crypto.randomBytes(45));
+                // data.parameters.toekn = token
                 tokens2Client.token = ws
-                ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
-                aiWorker.send(JSON.stringify(data))
+                data.parameters.text = data.parameters.text.substring(0, 1024)
+                // ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
+                aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
             
             case 'login':

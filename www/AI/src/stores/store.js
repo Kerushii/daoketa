@@ -7,7 +7,7 @@ const netRespAssist = ref('');
 const netAnnotate = ref('');
 const loggedIn = ref(false)
 const annoPdf = ref('')
-
+const token = ref('')
 socket.onopen = function(e) {
   alert("[open] Connection established");
 };
@@ -16,17 +16,22 @@ socket.onmessage = function(event) {
  //netResp.value = event.data.replace(/\n/g, '</br>');
  // netResp.value = event.data
  let data = JSON.parse(event.data)
- let action = data["action"].replace('username', '')
+ let action = data["action"]
  console.log(data)
  switch(action)
 {
+  case 'token':
+    token.value = data.parameters.token
+
+    break
   case 'remotePDF4Annotate':
     annoPdf.value = data.parameters.fName
-  case 'annotate':
-    netAnnotate.value = data.parameters.data
     break
-  case 'assist':
-    netRespAssist.value = data.parameters.data
+  case 'useAI4Annotate':
+    netAnnotate.value = data.parameters.text
+    break
+  case 'useAI4Assist':
+    netRespAssist.value = data.parameters.text
     break
   case 'loggedIn':
     loggedIn.value = true
@@ -52,11 +57,13 @@ function sendWS(msg) {
   socket.send(JSON.stringify(msg));
 }
 
-function assistSend(action, aiType, completionLength, temp, text){
-  sendWS({'action':'useAI', 'parameters':{userNameAction:'username'+action,aiType, completionLength, temp, text}})
+function assistSend(ai, len, temp, text){
+  sendWS({'action':'useAI4Assist', 'parameters':{token: token.value, ai, len, temp, text}})
 }
 
-
+function annotateSend(completionLen, temp, text){
+  sendWS({'action':'useAI4Annotate', 'parameters':{token: token.value,"ai":"gal", len:completionLen, temp, text}})
+}
 
 function login(passwd, usr){
   sendWS({action:'login', parameters:{passwd,usr}})
@@ -68,5 +75,5 @@ function clearnetAnnotate(){
 }
 
 export const useUserStore = defineStore('user', () => {
-  return { netRespAssist,netAnnotate, assistSend, clearnetAnnotate, login, loggedIn,annoPdf}
+  return { netRespAssist,netAnnotate, assistSend, clearnetAnnotate, login, loggedIn,annoPdf, annotateSend}
 })

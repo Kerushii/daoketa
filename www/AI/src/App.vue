@@ -25,7 +25,7 @@ export default {
   updated() {
   },
   methods: {
-    ...mapActions(useUserStore, ['assistSend', 'login']),
+    ...mapActions(useUserStore, [ 'login']),
     setActiveSelector(se){
 this.activeSelector=se;
     },

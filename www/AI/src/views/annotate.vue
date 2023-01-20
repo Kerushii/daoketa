@@ -163,11 +163,10 @@ export default {
 
             this.cursorX = event.clientX
             this.cursorY = event.clientY
-            // console.log(getSelectionText(), event.clientX, event.clientY)
-            if (this.aiType == 'gal') {
-                this.assistSend('annotate', this.aiType, this.completionLen, this.temp, text.replace(/\n/g, ' ') + "\n\nTLDR:")
+            
+                this.annotateSend(this.completionLen, this.temp, text.replace(/\n/g, ' ') + "\n\nTLDR:")
                 return
-            }
+            
 
         }
 

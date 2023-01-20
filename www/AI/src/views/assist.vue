@@ -34,11 +34,15 @@ export default {
         str = str.slice(0, n) + str.slice(n).replace(word, newWord);
         return str
       }
+      // split this.userinput into 2 parts: the last 1024 letters and all the previous letters
+      const previousPart = this.userInput.slice(0, -1024)
+      const lastPart = this.userInput.slice(-1024)
+
       if (this.priming)
-        return this.netRespAssist
+        return previousPart+this.netRespAssist
       // if(this.netResp.replace(/<\/br>/g, '\n').includes(this.userInput)){ // all user inputs use \n
-      if (this.netRespAssist.includes(removeLastn(this.userInput))) {
-        this.localMemory = this.netRespAssist
+      if (this.netRespAssist.includes(removeLastn(lastPart))) {
+        this.localMemory = previousPart+this.netRespAssist
       }
       return this.localMemory
     }
@@ -65,7 +69,7 @@ export default {
       console.log('2')
 
 
-      this.assistSend('assist', this.aiType, this.completionLen, this.temp / 100, removeLastn(this.userInput)) //when we send, replace all br with \n so ai can understand
+      this.assistSend(this.aiType, this.completionLen, this.temp / 100, removeLastn(this.userInput)) //when we send, replace all br with \n so ai can understand
       // console.log('sending' + this.userInput)
     }, 1000)
   },
