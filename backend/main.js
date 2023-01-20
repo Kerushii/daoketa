@@ -62,7 +62,7 @@ wss.on("connection", (ws) => {
             case 'useAI4Annotate':
                 // token = base64url(crypto.randomBytes(45));
                 // data.parameters.toekn = token
-                tokens2Client.token = ws
+                tokens2Client[token] = ws
                 data.parameters.text = data.parameters.text.substring(0, 1024)
                 // ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))

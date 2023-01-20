@@ -28,13 +28,13 @@ def galAiGetResp( length, temp, text):
         
     context = text
     mNewToken  = length
-    print('tokenizing', flush=True)
+    #print('tokenizing', flush=True)
     input_ids = tokenizerfb(context, return_tensors="pt").input_ids.to('cuda')
-    print('done tokenizing', flush=True)
+    #print('done tokenizing', flush=True)
     gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=mNewToken)
-    print('generated text', flush=True)
+    #print('generated text', flush=True)
     gen_text = tokenizerfb.batch_decode(gen_tokens)
-    print('decoding', flush=True)
+    #print('decoding', flush=True)
     return gen_text
 
 def pubmedGPTGetResp( length, temp, text):
@@ -52,8 +52,8 @@ def pubmedGPTGetResp( length, temp, text):
     return gen_text
     
 def attachAIResp2MsgEntry(texts):
-    print('served a request!', texts)
-    print(text2req)
+    #print('served a request!', texts)
+    #print(text2req)
     for item in texts:
         #if item contains the key of text2req as a substring
         for text in text2req:
@@ -64,7 +64,7 @@ def attachAIResp2MsgEntry(texts):
             
 
 def aiThread(whichAI, aiInput, completionLength,temp):
-    print('ai thread being run!', whichAI, aiInput, completionLength,temp)
+    #print('ai thread being run!', whichAI, aiInput, completionLength,temp)
     global runningAIs
     if whichAI == 'gal':
         text = galAiGetResp(completionLength,temp,  aiInput)
@@ -152,7 +152,7 @@ def on_open(ws):
     print("Opened connection")
 
 if __name__ == "__main__":
-    websocket.enableTrace(True)
+    #websocket.enableTrace(True)
     serverws = websocket.WebSocketApp("ws://127.0.0.1:8084",
                               on_open=on_open,
                               on_message=on_message,

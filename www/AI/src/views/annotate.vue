@@ -66,7 +66,7 @@
         </div>
         <input type="file" id="filess" name="filetoupload" style="display:none" @change="sendFile">
 
-        <label v-if='!source1' for="filess" style="position:absolute;width:71%;height:85%;mix-blend-mode:screen;top:12%;left:15%;" >
+        <label v-if='!source1' for="filess" style="position:absolute;width:71%;height:85%;mix-blend-mode:screen;top:12%;left:15%;">
             <div style="position:absolute;font-size: 25vh;font-family:font1;left: calc((100vw - 149vh) / 2);color:white;opacity:50%;top: 21%;width:100vh;">
                 选择文件
             </div>
@@ -77,7 +77,7 @@
             <div style="position:absolute;font-size: 6vh;font-family: font5;left: calc((100vw - 149vh) / 2);background:black;opacity:50%;top: 59%;width:100vh;">SELECT FILES
             </div>
         </label>
-        <div v-if="parseNet" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: 'grey' }">{{ parseNet }}</div>
+        <div v-if="parseNet" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: '#484848f2', padding: '1vh', color:'white', filter: 'drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px)', 'font-family': ' font1' }">{{ parseNet }}</div>
 
     </div>
 </template>
@@ -123,7 +123,7 @@ export default {
         }
     },
     methods: {
-        ...mapActions(useUserStore, ['assistSend', 'clearnetAnnotate',]),
+        ...mapActions(useUserStore, ['annotateSend', 'clearnetAnnotate',]),
         sendFile(e) {
             let photo = e.target.files[0];
             let formData = new FormData();
@@ -163,10 +163,10 @@ export default {
 
             this.cursorX = event.clientX
             this.cursorY = event.clientY
-            
-                this.annotateSend(this.completionLen, this.temp, text.replace(/\n/g, ' ') + "\n\nTLDR:")
-                return
-            
+
+            this.annotateSend(this.completionLen, this.temp, text.replace(/\n/g, ' ') + "\n\nTLDR:")
+            return
+
 
         }
 
