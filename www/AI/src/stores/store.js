@@ -8,6 +8,7 @@ const netAnnotate = ref('');
 const loggedIn = ref(false)
 const annoPdf = ref('')
 const token = ref('')
+const numToken = ref(0)
 socket.onopen = function(e) {
   alert("[open] Connection established");
 };
@@ -36,6 +37,9 @@ socket.onmessage = function(event) {
   case 'loggedIn':
     loggedIn.value = true
     break
+  case 'trialToken':
+    numToken.value = data.parameters.text
+    break
 }
 };
 
@@ -54,6 +58,7 @@ socket.onerror = function(error) {
 };
 
 function sendWS(msg) {
+  console.log('sending', JSON.stringify(msg))
   socket.send(JSON.stringify(msg));
 }
 
@@ -65,6 +70,10 @@ function annotateSend(completionLen, temp, text){
   sendWS({'action':'useAI4Annotate', 'parameters':{token: token.value,"ai":"gal", len:completionLen, temp, text}})
 }
 
+function esToken(text){
+  sendWS({'action':'trialToken', 'parameters':{token: token.value,"ai":"gal", text}})
+}
+
 function login(passwd, usr){
   sendWS({action:'login', parameters:{passwd,usr}})
 }
@@ -74,6 +83,10 @@ function clearnetAnnotate(){
   netAnnotate.value = false
 }
 
+function clearTokenTrial(){
+  numToken.value = false
+}
+
 export const useUserStore = defineStore('user', () => {
-  return { netRespAssist,netAnnotate, assistSend, clearnetAnnotate, login, loggedIn,annoPdf, annotateSend}
+  return { netRespAssist,netAnnotate, assistSend, clearnetAnnotate, login, loggedIn,annoPdf,numToken, annotateSend, esToken,clearTokenTrial}
 })

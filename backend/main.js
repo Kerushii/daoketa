@@ -7,7 +7,7 @@ const py = spawn("python3", ['-u',"./ai.py"]);
 
 py.stdout.on("data", (data) => {
     data = data.toString();
-    console.log(daya)
+    // console.log(daya)
 
 
 });
@@ -22,10 +22,21 @@ pyws.on("connection", (ws) => {
     aiWorker = ws
     console.log('ai worker connected')
     ws.on("message", (message) => {
+        // console.log(data)
         const data = JSON.parse(message);
         const token = data.token
         console.log(data)
-        tokens2Client[token].send(JSON.stringify({action:data.action, parameters:{text: data.response, token: data.token}}))
+        const action = data.action
+        switch(action){
+            case 'trialToken':
+                tokens2Client[token].send(JSON.stringify({action:data.action, parameters:{text: data.response, token: data.token}}))
+                break
+            
+            default:
+                const rtText = data.response.replace(data.text, '')
+                tokens2Client[token].send(JSON.stringify({action:data.action, parameters:{text: rtText, token: data.token}}))
+        }
+
     });
 
 
@@ -54,7 +65,7 @@ wss.on("connection", (ws) => {
                 tokens2Client[token] = ws
                 // data.parameters.text = data.parameters.text.substring(0, 1024)
                 // get the last 1024 characters
-                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 1024)
+                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 4096)
                 //vws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
@@ -63,7 +74,7 @@ wss.on("connection", (ws) => {
                 // token = base64url(crypto.randomBytes(45));
                 // data.parameters.toekn = token
                 tokens2Client[token] = ws
-                data.parameters.text = data.parameters.text.substring(0, 1024)
+                data.parameters.text = data.parameters.text.substring(0, 4096)
                 // ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
@@ -73,6 +84,15 @@ wss.on("connection", (ws) => {
                 const usr = data.parameters.usr
                 if(checkUsrLogin(usr, pass)=='admin')
                     ws.send(JSON.stringify({action:'loggedIn'}))
+                break
+            
+            case 'trialToken':
+                tokens2Client[token] = ws
+                // data.parameters.text = data.parameters.text.substring(0, 1024)
+                // get the last 1024 characters
+                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 4096)
+                //vws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
+                aiWorker.send(JSON.stringify({"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
         }
         
