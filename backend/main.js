@@ -1,5 +1,6 @@
 const WebSocketServer = require("ws").Server;
 const { spawn } = require("child_process");
+var pdfUtil = require('pdf-to-text');
 
 var aiWorker = null
 /*
@@ -15,8 +16,8 @@ py.stdout.on("data", (data) => {
 py.stdout.on("error", (err) => {
     console.log(err);
 });
-
 */
+
 const pyws = new WebSocketServer({ port: 8084 });
 pyws.on("connection", (ws) => {
     aiWorker = ws
@@ -33,7 +34,7 @@ pyws.on("connection", (ws) => {
                 break
             
             default:
-                const rtText = data.response.replace(data.text, '')
+                const rtText = data.response
                 tokens2Client[token].send(JSON.stringify({action:data.action, parameters:{text: rtText, token: data.token}}))
         }
 
@@ -65,7 +66,7 @@ wss.on("connection", (ws) => {
                 tokens2Client[token] = ws
                 // data.parameters.text = data.parameters.text.substring(0, 1024)
                 // get the last 1024 characters
-                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 4096)
+                data.parameters.text = data.parameters.text
                 //vws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
@@ -74,7 +75,7 @@ wss.on("connection", (ws) => {
                 // token = base64url(crypto.randomBytes(45));
                 // data.parameters.toekn = token
                 tokens2Client[token] = ws
-                data.parameters.text = data.parameters.text.substring(0, 4096)
+                data.parameters.text = data.parameters.text
                 // ws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"len":data.parameters.len,"temp":data.parameters.temp,"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
@@ -90,7 +91,7 @@ wss.on("connection", (ws) => {
                 tokens2Client[token] = ws
                 // data.parameters.text = data.parameters.text.substring(0, 1024)
                 // get the last 1024 characters
-                data.parameters.text = data.parameters.text.substring(data.parameters.text.length - 4096)
+                data.parameters.text = data.parameters.text
                 //vws.send(JSON.stringify({action:'useAIConfirm', parameters:{token}}))
                 aiWorker.send(JSON.stringify({"ai":data.parameters.ai,"token":data.parameters.token,"text":data.parameters.text,"action":data.action}))
                 break
@@ -120,14 +121,20 @@ http.createServer(function (req, res) {
          // for (const informIp in ws._socket.remoteAddress            )
           wss.clients.forEach(function each(client) {
             if(client._socket.remoteAddress == req.socket.remoteAddress)
-            client.send(
+            {client.send(
                 JSON.stringify({
                     action:'remotePDF4Annotate', parameters:{'fName': files.photo.originalFilename}
                 })
             )
-            //res.write('File uploaded and moved!');
-        res.end();
+            pdfUtil.pdfToText(newpath, function(err, data) {
+                if (err) console.log(err);
+                console.log(data); //print all text    
+              });
+        }
+
          });
+         res.write(newpath);
+         res.end();
         });
    });
     } else {

@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+
     "pinia": "^2.0.28",
     "vue": "^3.2.45",
     "vue-pdf-embed": "^1.1.5",

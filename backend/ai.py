@@ -1,258 +1,267 @@
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForCausalLM, OPTForCausalLM, AutoModelForSeq2SeqLM
 
-import json
-import threading
-import websocket
-import _thread
-import time
-import rel
+import queue
 from copy import deepcopy
 
-runningAIs=0
-runningAIsTokenOnly=0
+q = queue.Queue()
 
-text2req = {}
-text2tokenreq = {}
+import json
+import websocket
+import _thread
+import rel
 
-backlog = []
-backlogTokenOnly=[]
-
-serverws = None
-
-print('py init', flush=True)
-max_memory_mapping = {0: "24GB", 1: "24GB"}
-tokenizerfb = AutoTokenizer.from_pretrained("facebook/galactica-6.7b")
-tokenizerfb.add_special_tokens({'pad_token': '[PAD]'})
-#modelfb = AutoModelForCausalLM.from_pretrained("facebook/galactica-30b", device_map="auto",  max_memory=max_memory_mapping, offload_folder="offload",)
-modelfb = AutoModelForCausalLM.from_pretrained("facebook/galactica-6.7b", device_map="auto",  max_memory=max_memory_mapping)
-
-tokenizerpubgpt = AutoTokenizer.from_pretrained("stanford-crfm/pubmedgpt")
-tokenizerpubgpt.add_special_tokens({'pad_token': '[PAD]'})
-modelpubgpt = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto",  max_memory=max_memory_mapping)
+reqPoolToken = {}
+tokenLock = _thread.allocate_lock()
+reqPoolGen = {}
+genLock = _thread.allocate_lock()
 
 
 
+#modelpubgpt = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto", max_memory={0: "0GB", 1: "24GB", 2:"0GB"}, ).to('cuda:1')
+#modelpubgpt1 = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto", max_memory={0: "0GB", 1: "0GB", 2:"24GB"}, ).to('cuda:2')
+modelpubgpt = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto", )
+#modelpubgpt1 = AutoModelForCausalLM.from_pretrained("stanford-crfm/pubmedgpt",  device_map="auto", )
+#instr = AutoModelForSeq2SeqLM.from_pretrained('bigscience/mt0-xl', torch_dtype="auto", device_map="auto", max_memory={0: "24GB", 1: "24GB", 2:"0GB"}, )
+instr = AutoModelForSeq2SeqLM.from_pretrained('bigscience/mt0-xl', torch_dtype="auto", device_map="auto")
 
-
-
-
-
-
-
-
-
-
-
-
-
+modelfb = AutoModelForCausalLM.from_pretrained("facebook/galactica-6.7b", device_map="auto")
 
 print('py ready', flush=True)
 
-    
+
+def ai(model, id):
+    tokenizerpubgpt = AutoTokenizer.from_pretrained("stanford-crfm/pubmedgpt", truncation_side='left', model_max_length=1024)
+    tokenizerpubgpt.padding_side = 'left'
+    tokenizerpubgpt.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizerpubgpt.pad_token_id = 1
+    tokenizerfb = AutoTokenizer.from_pretrained("facebook/galactica-6.7b", use_fast=False, truncation_side='left', model_max_length=1024)
+    tokenizerfb.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizerfb.pad_token_id = 1
+    tokenizerfb.padding_side = 'left'
+
+    tokenizerInstr = AutoTokenizer.from_pretrained('bigscience/mt0-xl')
+
+
+    if model == 'gal' and id == 1:
+        useModel = modelfb
+        useTokenizer = tokenizerfb
+  #      device = 'cuda:0'
+
+
+    if model == 'gal' and id == 2:
+        useModel = modelfb
+        useTokenizer = tokenizerfb
+ #       device = 'cuda:0'
+
+    if model == 'instr' and id == 1:
+        useModel = instr
+        useTokenizer = tokenizerInstr
+#        device = 'cuda:0'
+
+
+    if model == 'instr' and id == 2:
+        useModel = instr
+        useTokenizer = tokenizerInstr
+#        device = 'cuda:0'
 
 
 
 
-#############################################################################################
-def attachAIResp2MsgEntry(texts):
-    #print('served a request!', texts)
-    #print(text2req)
-    for item in texts:
-        #if item contains the key of text2req as a substring
-        for text in text2req:
-            if text not in item:
+    if model == 'pubmedGPT' and id == 1:
+        useModel = modelpubgpt
+        useTokenizer = tokenizerpubgpt
+#        device = 'cuda:1'
+
+    if model == 'pubmedGPT' and id == 2:
+        useModel = modelpubgpt
+        useTokenizer = tokenizerpubgpt
+#        device = 'cuda:1'
+
+ #   if model == 'pubmedGPT' and id == 3:
+#        useModel = modelpubgpt1
+ #       useTokenizer = tokenizerpubgpt
+#        device = 'cuda:2'
+
+#    if model == 'pubmedGPT' and id == 4:
+ #       useModel = modelpubgpt1
+ #       useTokenizer = tokenizerpubgpt
+#        device = 'cuda:2'
+
+    while True:
+        genLock.acquire()
+        requestPile = q.get()
+        
+        # if the request is for tokenization, put it back in the queue
+        if requestPile[0] != 'gen':
+            q.put(requestPile)
+            genLock.release()
+            continue
+        else:
+            regP = deepcopy(requestPile[1])
+        # go through the request pile and get how many AIs are of model
+        aiCount = 0
+        
+        for request in regP:
+            if regP[request]['ai'] == model:
+                aiCount += 1
+                del reqPoolGen[request]
+        genLock.release()
+        # put the request back if there are requests for other AIs
+        newReq = {}
+        for request in regP:
+            if regP[request]['ai'] != model:
+                newReq[request] = regP[request]
+        
+        if len(newReq) > 0:
+            q.put(['gen',newReq])
+        if aiCount == 0:
+            continue
+        #print(regP)
+        context = []
+        tokens = []
+        temperature = 0
+        length = 0
+        for request in regP:
+            if regP[request]['ai'] != model:
+                print('continueing')
                 continue
-            text2req[text]['response'] = item
-            serverws.send(json.dumps(text2req[text], ensure_ascii=True))
+            if len(regP[request]['text']) == 0:
+                continue
+            if len(regP[request]['text']) > 9999:
+                regP[request]['text'] = regP[request]['text'][-9999:]
+            # add the context to the list
+            context.append(regP[request]['text'])
+            # and calculate the average temperature
+            if 'temp' in regP[request]:
+                temperature += float(regP[request]['temp'])
 
-def galAiGetResp( length, temp, text):
-    
-    print(text)
-    context = text
-    mNewToken  = length
-    print('tokenizing', flush=True)
-    input_ids = tokenizerfb(context, return_tensors="pt", padding=True).input_ids.to(modelfb.device)
-    print('done tokenizing', flush=True)
-    #gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=mNewToken)
-    gen_tokens = modelfb.generate(input_ids,  do_sample=True, temperature=temp, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=mNewToken)
+            # calculate the average length
+            if 'len' in regP[request]:
+                length += int(regP[request]['len'])
 
-    print('generated text', flush=True)
-    gen_text = tokenizerfb.batch_decode(gen_tokens)
-    print('decoding', flush=True)
-    return gen_text
+        if len(context) == 0:
+            continue
 
-def pubmedGPTGetResp( length, temp, text):
+        temperature = temperature / aiCount
+        length = length / aiCount
+        #serverws.send(json.dumps(request, ensure_ascii=True))
 
-    context = text
-    mNewToken  = length
-    #print('tokenizing', flush=True)
-    input_ids = tokenizerpubgpt(context, return_tensors="pt", padding=True).input_ids.to(modelpubgpt.device)
-    #print('done tokenizing', flush=True)
-    #gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,temperature=temp, max_time=30.0, max_new_tokens=mNewToken)
-    gen_tokens = modelpubgpt.generate(input_ids, do_sample=True,temperature=temp, max_time=30.0, max_new_tokens=mNewToken)
-    #print('generated text', flush=True)
-    gen_text = tokenizerpubgpt.batch_decode(gen_tokens)
-    #print('decoding', flush=True)
-    return gen_text
+        if model == 'gal':
+            print(context)
+            input_ids = useTokenizer(context, max_length=1024,truncation=True,return_tensors="pt", padding=True).input_ids.to(useModel.device)
+#            for indiReq in input_ids:
+#                if len(input_ids[indiReq])>1024:
+#                    input_ids[indiReq]=input_ids[indiReq][-1024:]
+            gen_tokens = useModel.generate(input_ids,  do_sample=True, temperature=temperature, top_k=50, top_p=0.95,  max_time=30.0, max_new_tokens=length)
+            gen_text = useTokenizer.batch_decode(gen_tokens)
 
+        if model == 'pubmedGPT':
+            input_ids = useTokenizer(context,max_length=1024,truncation=True, return_tensors="pt", padding=True, ).input_ids.to(useModel.device)
+#            for indiReq in input_ids:
+#                if len(input_ids[indiReq])>1024:
+#                    input_ids[indiReq]=input_ids[indiReq][-1024:]
+            gen_tokens = useModel.generate(input_ids,  do_sample=True, temperature=temperature,max_time=30.0, max_new_tokens=length, pad_token_id=useTokenizer.eos_token_id)
+            gen_text = useTokenizer.batch_decode(gen_tokens)
+        
+
+        if model == 'instr':
+            input_ids = useTokenizer(context,max_length=1024,truncation=True, return_tensors="pt", padding=True).input_ids.to(useModel.device)
+#            for indiReq in input_ids:
+#                if len(input_ids[indiReq])>1024:
+#                    input_ids[indiReq]=input_ids[indiReq][-1024:]
+            gen_tokens = useModel.generate(input_ids,  do_sample=True, temperature=temperature,max_time=30.0, max_new_tokens=length)
+            gen_text = useTokenizer.batch_decode(gen_tokens)
+
+        for index in range(len(gen_text)):
+            for req in regP:
+                if context[index] in regP[req]['text']:
+                    originalSubText = context[index]
+                    generatedText = gen_text[index]
+                    res = generatedText.replace(originalSubText, '')
+                    res = res.replace('[PAD]', '')
+                    regP[req]['response'] = res
+                    serverws.send(json.dumps(regP[request], ensure_ascii=True))
+
+        
+
+def tokenizer():
+    tokenizerpubgpt = AutoTokenizer.from_pretrained("stanford-crfm/pubmedgpt", truncation_side='left', model_max_length=1024)
+    tokenizerpubgpt.padding_side = 'left'
+    tokenizerpubgpt.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizerpubgpt.pad_token_id = 1
+    tokenizerfb = AutoTokenizer.from_pretrained("facebook/galactica-6.7b", use_fast=False, truncation_side='left', model_max_length=1024)
+    tokenizerfb.add_special_tokens({'pad_token': '[PAD]'})
+    tokenizerfb.pad_token_id = 1
+    tokenizerfb.padding_side = 'left'
+    while True:
+        tokenLock.acquire()
+        requestPile = q.get()
+        if requestPile[0] != 'token':
+            q.put(requestPile)
+            tokenLock.release()
+            continue
+        else:
+            regP = deepcopy( requestPile[1])
+        print('tokenizer:')
+        print(regP)
+        for request in regP:
+            # remove this request from the request pool 
             
+            # limit the context to 1024 tokens
 
-def aiThread(whichAI, aiInput, completionLength,temp):
-    #print('ai thread being run!', whichAI, aiInput, completionLength,temp)
-    global runningAIs
-    if whichAI == 'gal':
-        text = galAiGetResp(completionLength,temp,  aiInput)
-
-
-    if whichAI == 'pubmedGPT':
-        text = pubmedGPTGetResp(completionLength,temp,  aiInput)
-
-    attachAIResp2MsgEntry(text)
-    runningAIs-=1
-    #call aiTHreadLauncher upon finishing up
-    aiTheadLauncher()
-    return
-
-def aiTheadLauncher():
-    global runningAIs
-    #if nothing in backlog, return
-
-    try:
-        if len(backlog) == 0:
-            return
-        while runningAIs < 3:
-            #count how many reqs each ai have
-            aiReqCount = {'gal':0, 'pubmedGPT':0}
-            for i in range(len(backlog)):
-                if backlog[i]['ai'] == 'gal':
-                    aiReqCount['gal']+=1
-                if backlog[i]['ai'] == 'pubmedGPT':
-                    aiReqCount['pubmedGPT']+=1
-
-            #for the ai type with the highest req count, launch ai thread
-            if aiReqCount['gal'] > aiReqCount['pubmedGPT']:
-                aiType = 'gal'
-            else:
-                aiType = 'pubmedGPT'
-            if aiReqCount[aiType]==0:
-                return
-
-            backlog_copy = deepcopy(backlog)
-            processedMsg = []
-            for item in backlog_copy:
-                if item['ai'] == aiType:
-                    if len(item['text'])> 0:
-                        processedMsg.append(item['text'])
-                    backlog.remove(item)
-
-            #get the longest length in backlog_copy of this ai type
-            completionLength = 0
-            for item in backlog_copy:
-                if item['ai'] == aiType:
-                    lngth = int(item['len'])
-                    if lngth > completionLength:
-                        completionLength = lngth
-            #get the highest temp in backlog_copy of this ai type
-            completionTemp = 0
-            for item in backlog_copy:
-                if item['ai'] == aiType:
-                    temp = float(item['temp'])
-                    if temp > completionTemp:
-                        completionTemp = temp
-            #launch ai thread
-            runningAIs+=1
-
-            _thread.start_new_thread(aiThread, (aiType, processedMsg, completionLength, completionTemp))
-    except:
-        print('invalid json detail')
-##############################################################################################################
-
-##################################
-def attachToken2MsgEntry(res):
-    text = res[1]
-    result = res[0]
-
-    text2tokenreq[text]['response'] = result
-    serverws.send(json.dumps(text2tokenreq[text], ensure_ascii=True))
-
-def galAiGetTokenOnly(text):
- 
-    print('tokenizing', flush=True)
-    input_ids = tokenizerfb(text, return_tensors="pt", padding=True).input_ids.to('cuda')
- 
-    return [len(input_ids[0]), text]
-
-def pubmedGPTGetTokenOnly(text):
-
-    input_ids = tokenizerpubgpt(text, return_tensors="pt", padding=True).input_ids.to('cuda')
-    
-    return [len(input_ids[0]), text]
-
-def aiThreadTokenOnly(whichAI, aiInput):
-    #print('ai thread being run!', whichAI, aiInput, completionLength,temp)
-    global runningAIsTokenOnly
-    runningAIsTokenOnly+=1
-    if whichAI == 'gal':
-        res = galAiGetTokenOnly( aiInput)
+            del reqPoolToken[request]
+        tokenLock.release()
+        for request in regP:
+            print(regP)
+            if len(regP[request]['text']) > 9999:
+                regP[request]['text'] = regP[request]['text'][-9999:]
+            if len(regP[request]['text']) == 0:
+                continue
+            context = regP[request]['text']
+            aiType = regP[request]['ai']
+            if aiType == 'gal':
+                regP[request]['response'] = len(tokenizerfb(context, max_length=1024,truncation=True,return_tensors="pt", padding=True).input_ids[0])
+            if aiType == 'pubmedGPT':
+                regP[request]['response'] = len(tokenizerpubgpt(context, return_tensors="pt",max_length=1024,truncation=True, padding=True).input_ids[0])
+            print(tokenizerfb(context, return_tensors="pt", padding=True).input_ids)
+            serverws.send(json.dumps(regP[request], ensure_ascii=True))
 
 
-    if whichAI == 'pubmedGPT':
-        res = pubmedGPTGetTokenOnly(aiInput)
-
-    attachToken2MsgEntry(res)
-    runningAIsTokenOnly-=1
-    #call aiTHreadLauncher upon finishing up
-    aiTheadLauncherTokenOnly()
-    return
-
-def aiTheadLauncherTokenOnly():
-    global runningAIsTokenOnly
-    global backlogTokenOnly
-
-    try:
-        if len(backlogTokenOnly) == 0:
-            return
-
-        for item in backlogTokenOnly:
-            if runningAIsTokenOnly > 2:
-                return
-            if item['ai'] == 'gal':
-                _thread.start_new_thread(aiThreadTokenOnly, ('gal', item['text']))
-            if item['ai'] == 'pubmedGPT':
-                _thread.start_new_thread(aiThreadTokenOnly, ('pubmedGPT', item['text']))
-        backlogTokenOnly = []
-    except:
-        print('invalid json detail')
 
 
-##################################
 
 
 def on_message(ws, message):
-    try:
-        global backlog
-        global backlogTokenOnly
-        rx = json.loads(message)
-        
 
-        # trial token doesnt go through generation like the other actions
-        if rx['action'] == 'trialToken':
-            text2tokenreq[rx['text']]=rx
-            for item in backlogTokenOnly:
-                if item['token'] == rx['token']:
-                    backlogTokenOnly.remove(item)
-            backlogTokenOnly.append(rx)
-            aiTheadLauncherTokenOnly()
-            return
-        # generation actions
-        text2req[rx['text']]=rx
-        for item in backlog:
-            if item['token'] == rx['token']:
-                backlog.remove(item)
-        backlog.append(rx)
-        aiTheadLauncher()
-    except:
-        print('invalid json')
+        
+    rx = json.loads(message)
+    clientToken = rx['token']
+    #on message clear all messages in the queue
+    while not q.empty():
+        q.get()
+    #print('recived msg')
+    #print(rx)
+    if rx['action'] == 'trialToken':
+        #go through the req and remove all requests with the same token
+        regP = deepcopy(reqPoolToken)
+        for key in regP:
+            if reqPoolToken[key] == clientToken:
+                del reqPoolToken[key]
+        # add the new request to the pool
+        reqPoolToken[rx['token']] = rx
+        # add the requestpool to the queue
+        q.put(['token',reqPoolToken])
+
+    if rx['action'] == 'useAI4Assist' or rx['action'] == 'useAI4Annotate':
+        #go through the req and remove all requests with the same token
+        regG = deepcopy(reqPoolGen)
+        for key in regG:
+            if reqPoolGen[key] == clientToken:
+                del reqPoolGen[key]
+        # add the new request to the pool
+        reqPoolGen[rx['token']] = rx
+        # add the requestpool to the queue
+        q.put(['gen',reqPoolGen])
 
 def on_error(ws, error):
     print(error)
@@ -263,8 +272,25 @@ def on_close(ws, close_status_code, close_msg):
 def on_open(ws):
     print("Opened connection")
 
+
+
+
 if __name__ == "__main__":
-    #websocket.enableTrace(True)
+    _thread.start_new_thread(ai, ('gal', 1))
+    _thread.start_new_thread(ai, ('gal', 2))
+
+    _thread.start_new_thread(ai, ('instr', 1))
+    _thread.start_new_thread(ai, ('instr', 2))
+    _thread.start_new_thread(ai, ('pubmedGPT', 1))
+    _thread.start_new_thread(ai, ('pubmedGPT', 2))
+#    _thread.start_new_thread(ai, ('pubmedGPT', 3))
+ #   _thread.start_new_thread(ai, ('pubmedGPT', 4))
+
+    # start 32 threads for tokenizers
+
+    for i in range(32):
+        _thread.start_new_thread(tokenizer,())
+
     serverws = websocket.WebSocketApp("ws://127.0.0.1:8084",
                               on_open=on_open,
                               on_message=on_message,
@@ -274,8 +300,5 @@ if __name__ == "__main__":
     serverws.run_forever(dispatcher=rel, reconnect=5)  # Set dispatcher to automatic reconnection, 5 second reconnect delay if connection closed unexpectedly
     rel.signal(2, rel.abort)  # Keyboard Interrupt
     rel.dispatch()
-
-
-    
 
 

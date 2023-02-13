@@ -79,7 +79,7 @@
         </label>
         <div v-if="numToken" :style="{ position: 'absolute', width: '10vh', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: '#2196f3', 'padding-top': '1vh', color:'white', filter: 'drop-shadow(rgba(33, 150, 243, 0.3) 14px 11px 4px)', 'font-family': ' font9','text-align':'right', 'font-size':'1.3vh' }">{{ numToken }}/1024</div>
         <div v-if="parseNet" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: '#484848f2', padding: '1vh', color:'white', filter: 'drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px)', 'font-family': ' font1','font-size':'1.6vh' }">{{ parseNet }}</div>
-
+        <div v-if="additionalMenu" :style="{ position: 'absolute', width: '16vw', top: 'calc(2vh + ' + cursorY + 'px)', left: cursorX + 'px', background: '#484848f2', padding: '1vh', color:'white', filter: 'drop-shadow(rgba(0, 0, 0, 0.3) 14px 11px 4px)', 'font-family': ' font1','font-size':'1.6vh' }" @click.stop="explain">EXPLAIN</div>
     </div>
 </template>
 
@@ -103,6 +103,7 @@ export default {
             menuEntry: 'model',
             temp: 0.7,
             completionLen: 100,
+            additionalMenu: false,
         }
     },
     computed: {
@@ -124,7 +125,26 @@ export default {
         }
     },
     methods: {
-        ...mapActions(useUserStore, ['annotateSend', 'clearnetAnnotate','esToken','clearTokenTrial']),
+        ...mapActions(useUserStore, ['annotateSend', 'clearnetAnnotate','esToken','clearTokenTrial','googleThis']),
+        explain(){
+            function getSelectionText() {
+                var text = "";
+                if (window.getSelection) {
+                    text = window.getSelection().toString();
+                } else if (document.selection && document.selection.type != "Control") {
+                    text = document.selection.createRange().text;
+                }
+                
+                return text;
+            }
+            this.annotateSend(this.completionLen, this.temp, 'Question: What is '+this.selectedText.replace(/\n/g, ' ') + '? \n\nAnswer:')
+        },
+        clearAdditionalMenu(){
+            this.additionalMenu = false
+        },
+        enableAdditionalMenu(){
+            this.additionalMenu = true
+        },
         sendFile(e) {
             let photo = e.target.files[0];
             let formData = new FormData();
@@ -154,12 +174,14 @@ export default {
 
             if (!text) {
                 this.clearnetAnnotate()
+                this.clearAdditionalMenu()
                 return
             }
-            if (text.length <= 10) {
-                this.clearnetAnnotate()
+            /*
+            if (text.length <= 20) {
+                this.enableAdditionalMenu()
                 return
-            }
+            }*/
             if (text.length >= 4096)
                 return
             /*if(this.selectedText == text)

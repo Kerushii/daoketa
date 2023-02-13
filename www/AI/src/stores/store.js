@@ -9,41 +9,40 @@ const loggedIn = ref(false)
 const annoPdf = ref('')
 const token = ref('')
 const numToken = ref(0)
-socket.onopen = function(e) {
+socket.onopen = function (e) {
   alert("[open] Connection established");
 };
 
-socket.onmessage = function(event) {
- //netResp.value = event.data.replace(/\n/g, '</br>');
- // netResp.value = event.data
- let data = JSON.parse(event.data)
- let action = data["action"]
- console.log(data)
- switch(action)
-{
-  case 'token':
-    token.value = data.parameters.token
+socket.onmessage = function (event) {
+  //netResp.value = event.data.replace(/\n/g, '</br>');
+  // netResp.value = event.data
+  let data = JSON.parse(event.data)
+  let action = data["action"]
+  console.log(data)
+  switch (action) {
+    case 'token':
+      token.value = data.parameters.token
 
-    break
-  case 'remotePDF4Annotate':
-    annoPdf.value = data.parameters.fName
-    break
-  case 'useAI4Annotate':
-    netAnnotate.value = data.parameters.text
-    break
-  case 'useAI4Assist':
-    netRespAssist.value = data.parameters.text
-    break
-  case 'loggedIn':
-    loggedIn.value = true
-    break
-  case 'trialToken':
-    numToken.value = data.parameters.text
-    break
-}
+      break
+    case 'remotePDF4Annotate':
+      annoPdf.value = data.parameters.fName
+      break
+    case 'useAI4Annotate':
+      netAnnotate.value = data.parameters.text
+      break
+    case 'useAI4Assist':
+      netRespAssist.value = data.parameters.text
+      break
+    case 'loggedIn':
+      loggedIn.value = true
+      break
+    case 'trialToken':
+      numToken.value = data.parameters.text
+      break
+  }
 };
 
-socket.onclose = function(event) {
+socket.onclose = function (event) {
   if (event.wasClean) {
     alert(`[close] Connection closed cleanly, code=${event.code} reason=${event.reason}`);
   } else {
@@ -53,7 +52,7 @@ socket.onclose = function(event) {
   }
 };
 
-socket.onerror = function(error) {
+socket.onerror = function (error) {
   alert(`[error]`);
 };
 
@@ -62,31 +61,42 @@ function sendWS(msg) {
   socket.send(JSON.stringify(msg));
 }
 
-function assistSend(ai, len, temp, text){
-  sendWS({'action':'useAI4Assist', 'parameters':{token: token.value, ai, len, temp, text}})
+function assistSend(ai, len, temp, text) {
+  if (ai == 'gal') {
+    const chars2Keep = 1024 - len
+    sendWS({ 'action': 'useAI4Assist', 'parameters': { token: token.value, ai, len, temp, 'text': text.substring(text.length - chars2Keep) } })
+  }
+  else{
+    const chars2Keep = 1024 - len
+    sendWS({ 'action': 'useAI4Assist', 'parameters': { token: token.value, ai, len, temp, 'text': text.substring(text.length - chars2Keep) } })
+  }
 }
 
-function annotateSend(completionLen, temp, text){
-  sendWS({'action':'useAI4Annotate', 'parameters':{token: token.value,"ai":"gal", len:completionLen, temp, text}})
+function googleThis(kw){
+ 
 }
 
-function esToken(text){
-  sendWS({'action':'trialToken', 'parameters':{token: token.value,"ai":"gal", text}})
+function annotateSend(completionLen, temp, text) {
+  sendWS({ 'action': 'useAI4Annotate', 'parameters': { token: token.value, "ai": "gal", len: completionLen, temp, text } })
 }
 
-function login(passwd, usr){
-  sendWS({action:'login', parameters:{passwd,usr}})
+function esToken(text) {
+  sendWS({ 'action': 'trialToken', 'parameters': { token: token.value, "ai": "gal", text } })
+}
+
+function login(passwd, usr) {
+  sendWS({ action: 'login', parameters: { passwd, usr } })
 }
 
 
-function clearnetAnnotate(){
+function clearnetAnnotate() {
   netAnnotate.value = false
 }
 
-function clearTokenTrial(){
+function clearTokenTrial() {
   numToken.value = false
 }
 
 export const useUserStore = defineStore('user', () => {
-  return { netRespAssist,netAnnotate, assistSend, clearnetAnnotate, login, loggedIn,annoPdf,numToken, annotateSend, esToken,clearTokenTrial}
+  return { netRespAssist, netAnnotate, assistSend, clearnetAnnotate, login, loggedIn, annoPdf, numToken, annotateSend, esToken, clearTokenTrial, googleThis }
 })

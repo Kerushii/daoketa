@@ -3,6 +3,9 @@
     "@achrinza/node-ipc": "^10.1.7",
     "base64url": "^3.0.1",
     "formidable": "^2.1.1",
+    "mocha": "^10.2.0",
+    "pdf-to-text": "^0.0.7",
+    "should": "^13.2.3",
     "ws": "^8.12.0"
   }
 }
